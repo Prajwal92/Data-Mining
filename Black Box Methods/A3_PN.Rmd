@@ -1,0 +1,305 @@
+---
+title: "A3_PN"
+author: "Prajwal Nagaraju"
+date: "March 4, 2017"
+output: pdf_document
+---
+
+#1.	Code chunk 1 - Set up, data import and inspection code 
+```{r -Set up, data import and inspection code}
+
+library(caret)
+library(kernlab)
+library(rminer)
+library(matrixStats)
+library(knitr)
+library(RWeka)
+
+# import data
+setwd("~/Desktop")
+Bart <- read.csv(file = "BartRider.csv", stringsAsFactors = FALSE)
+Sales <- read.csv(file = "sales_filtered.csv", stringsAsFactors = FALSE)
+
+#Transform character variables to factor
+Bart$DualInc <- as.factor(Bart$DualInc)
+Bart$Gender <- as.factor(Bart$Gender)
+Bart$Language <- as.factor(Bart$Language)
+Bart$OwnRent <- as.factor(Bart$OwnRent)
+Bart$Rider <- as.factor(Bart$Rider)
+
+Sales$Platform <- factor(Sales$Platform)
+Sales$Genre <- factor(Sales$Genre)
+Sales$Rating <- factor(Sales$Rating)
+
+#Show the overall structures and summaries of the input data files
+str(Bart)
+summary(Bart)
+
+str(Sales)
+summary(Sales)
+```
+
+#Build and examine the topologies of ANN models using multilayerperceptron in RWeka (hereafter, they are called mlp models) 
+```{r-Build and examine the topologies of ANN models using multilayerperceptron in RWeka (hereafter, they are called mlp models) }
+#A.	Using the sales_filtered data set without the name variable, build mlp models 
+#and examine topologies, summaries and training performances of the built models
+#using the following numbers of hidden layer and hidden nodes: 
+Sales$Name <- NULL
+
+MLP <- make_Weka_classifier("weka/classifiers/functions/MultilayerPerceptron")
+
+#A.	Using the sales_filtered data set without the name variable, build mlp models and 
+#examine topologies, summaries and training performances of the built models using the
+#following numbers of hidden layer and hidden nodes:
+#i.	H=0, H='a', H='t', H='i', H='o', H=h1 and H='h1, h1'. Here h1 is a number of your choice. 
+#Try a few different values of h1. Select only one h1 in the final code you submit. 
+#To reduce output file size, show the ANN topology for H='a' only.
+#ii.	Use default values of other parameters - L, M and N when building all of the models for 2.A.i. 
+
+# MLP's default parameter values of MLP,L=0.3,M=0.2, N=500, H='a'
+# L: learning rate with default=0.3
+# M: momemtum with default=0.2
+# N: number of epochs with default=500
+# H <comma seperated numbers for nodes on each layer>
+  #The hidden nodes to be created on each layer:
+  # an integer, or the letters 'a' = (# of attribs + # of classes) / 2, 
+  #'i' = # of attribs, 'o' = # of classes, 't' = (# of attribs + # of classes)
+  # default of H is 'a'.
+
+l <- 0.3
+m <- 0.2
+n <-500
+h <- 'a'
+
+model_a <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H=h)) 
+model_a
+
+model_0 <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H=0))
+
+model_o <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H='o'))
+
+model_i <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H='i'))
+
+model_t <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H='t'))
+
+model_11 <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H=11))
+
+model_11_11 <- MLP(Global_Sales~ .,data = Sales,control = Weka_control(L=l,M=m, N=n,H='11,11'))
+
+# Take a look at training performance
+
+summary(model_a)
+summary(model_0)
+summary(model_o) 
+summary(model_i) 
+summary(model_t) 
+summary(model_11) 
+summary(model_11_11) 
+
+#B.Using the entire BartRider data set, build mlp models and examine topologies, 
+#summaries and training performances of the built models using the following numbers of hidden layer and hidden nodes
+#i.	H=0, H='a', H='t', H='i', H='o', H=h1 and H='h1, h1'. Here h1 is a number of your choice. 
+#Try a few different values of h1. Select only one h1 in the final code you submit. 
+#To reduce output file size, show the ANN topology for H='a' only.
+#ii.	Use default values of other parameters - L, M and N when building all of the models for 2.B.i. 
+
+l <- 0.3
+m <- 0.2
+n <-500
+h <- 'a'
+
+# This MLP call creates the same model using default values
+
+model_a1 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H=h))  
+model_a1
+
+# Try different H values
+
+model_01 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H=0))
+
+model_o1 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H='o'))
+
+model_i1 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H='i'))
+
+model_t1 <-MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H='t'))
+
+model_11_1 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H=11))
+
+model_11_11_1 <- MLP(Rider ~ .,data = Bart,control = Weka_control(L=l,M=m, N=n,H='11,11'))
+# Take a look at training performance
+
+summary(model_a1)
+summary(model_01)
+summary(model_o1) 
+summary(model_i1) 
+summary(model_t1) 
+summary(model_11_1) 
+summary(model_11_11_1)
+```
+
+#3.Code chunk 3 - Follow the examples in R tutorials for week 5 to define two named cross validation functions
+```{r-Follow the examples in R tutorials for week 5 to define two named cross validation functions}
+#A.	Define a named function for cross validation evaluation of mlp models with 
+#learning rate, momentum, the number of epochs and the number of hidden layer nodes in one hidden layer 
+#included as input arguments in addition to df, target, nFolds, seedVal and metrics_list.
+
+cv_function_MLP <- function(df, target, nFolds, seedVal, metrics_list, l, m, n, h)
+{
+# create folds using the assigned values
+
+set.seed(seedVal)
+folds = createFolds(df[,target],nFolds)
+
+# The lapply loop
+
+cv_results <- lapply(folds, function(x)
+{ 
+# data preparation:
+
+  test_target <- df[x,target]
+  test_input <- df[x,-target]
+  
+  train_target <- df[-x,target]
+  train_input <- df[-x,-target]
+   pred_model <- MLP(train_target ~ .,data = train_input,control = Weka_control(L=l,M=m, N=n,H=h))  
+  pred <- predict(pred_model, test_input)
+  return(mmetric(test_target,pred,metrics_list))
+})
+
+cv_results_m <- as.matrix(as.data.frame(cv_results))
+cv_mean<- as.matrix(rowMeans(cv_results_m))
+cv_sd <- as.matrix(rowSds(cv_results_m))
+colnames(cv_mean) <- "Mean"
+colnames(cv_sd) <- "Sd"
+cv_all <- cbind(cv_results_m, cv_mean, cv_sd)
+kable(t(cbind(cv_mean,cv_sd)),digits=2)
+}
+
+#B.	Define a named function for cross validation evaluation of ksvm models with kernel function 
+#and cost factor included as input arguments in addition to df, target, nFolds, seedVal and metrics_list.
+
+cv_function_ksvm <- function(df, target, nFolds, seedVal, metrics_list, kern, c)
+{
+# create folds using the assigned values
+
+set.seed(seedVal)
+folds = createFolds(df[,target],nFolds)
+
+# The lapply loop
+
+cv_results <- lapply(folds, function(x)
+{ 
+# data preparation:
+
+  test_target <- df[x,target]
+  test_input <- df[x,-target]
+  
+  train_target <- df[-x,target]
+  train_input <- df[-x,-target]
+   pred_model <- ksvm(train_target ~ .,data = train_input,kernel=kern,C=c)  
+  pred <- predict(pred_model, test_input)
+  return(mmetric(test_target,pred,metrics_list))
+})
+
+cv_results_m <- as.matrix(as.data.frame(cv_results))
+cv_mean<- as.matrix(rowMeans(cv_results_m))
+cv_sd <- as.matrix(rowSds(cv_results_m))
+colnames(cv_mean) <- "Mean"
+colnames(cv_sd) <- "Sd"
+kable(t(cbind(cv_mean,cv_sd)),digits=2)
+}
+```
+
+#4.	Code chunk 4 - Call the cv function defined in 3A to build and evaluate mlp models. Set the number of folds to 5 
+```{r-Call the cv function defined in 3A to build and evaluate mlp models. Set the number of folds to 5}
+#A.	Use the sales_filtered data set without the name variable for the following tasks.
+###  Set up cv parameters
+
+df <- Sales
+target <- 3
+seedVal <- 500
+metrics_list <- c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","R2")
+
+#default
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.3, 0.2, 500, 'a') #Slow 
+
+#the 4 models with best performance and speed are shown below:
+# changing learning rate
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.1, 0.2, 500, 'a') 
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.05, 0.2, 500, 'a')
+
+# changing momentum
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.05, 0.1, 500, 'a')
+
+# changing # of epochs
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.05, 0.2, 750, 'a')
+
+#B.Use the BartRider data set for the following tasks.
+df <- Bart
+target <- 12
+seedVal <- 500
+metrics_list <- c("ACC","TPR","PRECISION","F1")
+
+
+# default model
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.3, 0.2, 500, 'a')
+
+#the 4 models with best performance and speed are shown below:
+# changing learning rate
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.1, 0.2, 500, 'a')
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.05, 0.2, 500, 'a')
+
+# changing momentum
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.05, 0.1, 500, 'a')
+
+# changing # of epochs
+cv_function_MLP(df, target, 5, seedVal, metrics_list, 0.3, 0.2, 750, 'a')
+```
+
+#5.	Code chunk 5 - Call the cv function defined in 3.B to build and evaluate ksvm models. Set the number of folds to 5
+```{r-Code chunk 5 - Call the cv function defined in 3.B to build and evaluate ksvm models. Set the number of folds to 5}
+
+#A.	Use the sales_filtered data set without the name variable for the following tasks.
+df <- Sales
+target <- 3
+seedVal <- 500
+metrics_list <- c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","R2")
+
+#i.	Use the default kernel and cost values of 'rbfdot' and 1 to build and evaluate ksvm models.
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 1)
+
+#ii.	Try different combinations of kernel functions and cost values that are different from 
+#their default values to build and evaluate models.  Choose only three combinations in your final code 
+#based on a balance of model performance and speed.
+
+#the 3 models chosen based on model performance and speed
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 5)
+
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 10)
+
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 20)
+
+#B.	Use the BartRider data set for the following tasks.
+
+df <- Bart
+target <- 12
+seedVal <- 500
+metrics_list <- c("ACC","TPR","PRECISION","F1")
+
+#i.	Use the default kernel and cost values of 'rbfdot' and 1 to build and evaluate ksvm models.
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 1)
+
+#ii.	Try different combinations of kernel functions and cost values that are 
+#different from their default values to build and evaluate models.  Choose only three combinations 
+#in your final code based on a balance of model performance and speed.
+
+#the 3 models chosen based on model performance and speed
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 5)
+
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 10)
+
+cv_function_ksvm(df, target, 5, seedVal, metrics_list, 'rbfdot', 20)
+
+
+```
+
