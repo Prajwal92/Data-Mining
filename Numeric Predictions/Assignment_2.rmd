@@ -1,0 +1,296 @@
+---
+title: "Assignment 2"
+author: "Prajwal Nagaraju"
+date: "February 19, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+knitr::opts_chunk$set(echo = T,
+results='markup',
+warning = F,
+message =F)
+```
+#Set up, data import, data exploration, data partitioning and inspection code for the following
+```{r - Code Chunk 1}
+#A.Package loading, and data import.  Show the overall structure and summary of the input data.  
+#Other than Name, all other non-numeric fields should be factor variables. 
+library(rmarkdown)
+library(rpart)
+library(RWeka)
+library(caret)
+library(rminer)
+library(matrixStats)
+library(knitr)
+library(psych)
+getwd()
+setwd("~/Desktop")
+
+
+game_sales <- read.csv(file = "sales_filtered.csv", stringsAsFactors = FALSE)
+
+#Show the overall structure and summary of the input data
+
+str(game_sales)
+summary(game_sales)
+
+#Other than name Convert all non numeric variables to factor
+game_sales$Platform <- factor(game_sales$Platform)
+game_sales$Genre <- factor(game_sales$Genre)
+game_sales$Rating <- factor(game_sales$Rating)
+
+summary(game_sales)
+
+#B.Include commands to explore numeric variables' distributions and their correlations, 
+#as well as commands to explore factor variables and their relationships to the target variable
+
+#commands to explore numeric variables' distributions and their correlations
+
+#Histograms
+hist(game_sales$Global_Sales ,
+     main = "Histogram of Global Sales" ,xlab = "Global Sales",ylab = "Value")
+
+hist(game_sales$Critic_Score ,
+     main = "Histogram of Critic_Score" ,xlab = "Critic_Score",ylab = "Value")
+
+hist(game_sales$Critic_Count ,
+     main = "Histogram of Critic_Count" ,xlab = "Critic_Count",ylab = "Value")
+
+hist(game_sales$User_Score ,
+     main = "Histogram of User_Score" ,xlab = "User_Score",ylab = "Value")
+
+hist(game_sales$User_Count ,
+     main = "Histogram of User_Count" ,xlab = "User_Count",ylab = "Value")
+
+#boxplot
+boxplot(game_sales$Global_Sales ,
+     main = "Boxplot of Global Sales" ,xlab = "Global Sales",ylab = "Value")
+
+boxplot(game_sales$Critic_Score ,
+     main = "Boxplot of Critic_Score" ,xlab = "Critic_Score",ylab = "Value")
+
+boxplot(game_sales$Critic_Count ,
+     main = "Boxplot of Critic_Count" ,xlab = "Critic_Count",ylab = "Value")
+
+boxplot(game_sales$User_Score ,
+     main = "Boxplot of User_Score" ,xlab = "User_Score",ylab = "Value")
+
+boxplot(game_sales$User_Count ,
+     main = "Boxplot of User_Count" ,xlab = "User_Count",ylab = "Value")
+
+#Corelation
+cor(game_sales[sapply(game_sales, is.numeric)])
+pairs.panels(game_sales[sapply(game_sales, is.numeric)])
+
+#Exploring factor variables
+str(game_sales)
+
+
+#Function to calculate percentage of instances that include the nominal value
+Nominal <- function(x){
+prop.table(table(x))
+}
+
+#Function Call to show percentage of instances that include the nominal value
+Nominal(game_sales$Platform)
+Nominal(game_sales$Genre)
+Nominal(game_sales$Rating)
+
+#Retrieve the levels of factor variables
+nlevels(game_sales$Platform)
+nlevels(game_sales$Genre)
+nlevels(game_sales$Rating)
+
+pairs.panels(game_sales[c(2,3,9,4)])
+
+#D.Use the whole data set without the Name field, build a linear regression model. 
+#Show the summary of the model to understand the significance and coefficients of the predictors 
+#in the model and the overall model fit.
+
+game_lm <- lm(Global_Sales ~ Platform + Genre + Critic_Score + Critic_Count + User_Score + User_Count + Rating ,data = game_sales)
+summary(game_lm)
+
+#F.Partition the data set for simple hold-out evaluation - 70% for training and the other 30% for testing.
+
+set.seed(100)
+inTrain <- createDataPartition(game_sales$Global_Sales, p=0.7, list=FALSE)
+train_target <- game_sales[inTrain ,4]
+test_target <- game_sales[ -inTrain ,4]
+
+train_input <- game_sales[inTrain ,c(-1,-4)]
+test_input <- game_sales[-inTrain ,c(-1,-4)]
+
+#G.	Show the overall summaries of train and test sets
+summary(train_target)
+summary(test_target)
+summary(train_input)
+summary(test_input)
+```
+
+#2.	Code chunk 2- Simple lm, rpart and M5P model training and testing:
+```{r - Code Chunk 2}
+
+#A.	Train three models using lm, rpart, and M5P. Use the default settings of these methods throughout this assignment. 
+game_base_train_model <- lm(train_target~., data = train_input)
+game_base_train_model
+summary(game_base_train_model)
+
+# regression tree using rpart
+game_rpart_model <- rpart(train_target ~ ., data = train_input)
+game_rpart_model
+summary(game_rpart_model)
+
+#Rweka
+WPM("list-packages", "installed")
+game_m5p_model <- M5P(train_target ~ ., data = train_input)
+game_m5p_model
+summary(game_m5p_model)
+
+#B.	Generate and this model's explanatory evaluation metrics and 
+#predictive error metrics in both the testing and training sets
+
+#LM Model
+predictions_base_test <- predict(game_base_train_model, test_input)
+predictions_base_train <- predict(game_base_train_model, train_input)
+
+# Generating multiple prediction evaluation metrics using rminer package
+# performance of predictions on testing data 
+mmetric(test_target,predictions_base_test,c("MAE","RMSE","MAPE","RMSPE","RAE", "RRSE", "COR", "R2"))
+
+# performance of predictions on training data
+mmetric(train_target,predictions_base_train,c("MAE","RMSE","MAPE","RMSPE","RAE", "RRSE", "COR", "R2"))
+
+#Rpart model
+
+#generate predictions for the testing and training dataset
+predictions_rpart_test <- predict(game_rpart_model, test_input)
+predictions_rpart_train <- predict(game_rpart_model, train_input)
+
+# Performance of predictions on test data
+mmetric(test_target,predictions_rpart_test,c("MAE","RMSE","MAPE","RMSPE","RAE", "RRSE","COR", "R2"))
+
+# Performance of predictions on train data
+mmetric(train_target,predictions_rpart_train,c("MAE","RMSE","MAPE","RMSPE","RAE", "RRSE","COR", "R2"))
+
+#RWeka
+# generate predictions for the model
+predictions_m5p_test <- predict(game_m5p_model, test_input)
+predictions_m5p_train <- predict(game_m5p_model, train_input)
+# Generating prediction performance metrics using rminer package
+# Performance of predictions on test data
+mmetric(test_target,predictions_m5p_test,c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","COR","R2"))
+mmetric(train_target,predictions_m5p_train,c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","COR","R2"))
+```
+
+#Cross-validation of simple lm, rpart, and M5P models
+```{r - Code Chunk 3}
+#A.Define a named function for cross-validation of numeric prediction models that generates a table of the model fit 
+#and error metrics for each fold along with the means and standard deviations of the metrics over all folds.
+
+cv_function <- function(df, target, nFolds, seedVal, prediction_method, metrics_list)
+{
+  # create folds
+  set.seed(seedVal)
+  folds = createFolds(df[,target],nFolds) 
+  # perform cross validation
+  cv_results <- lapply(folds, function(x)
+  { 
+    test_target <- df[x,target]
+    test_input  <- df[x,-target]
+
+    train_target <- df[-x,target]
+    train_input <- df[-x,-target]
+
+    prediction_model <- prediction_method(train_target~.,train_input) 
+    pred<- predict(prediction_model,test_input)
+    return(mmetric(test_target,pred,metrics_list))
+  })
+  # generate means and sds and show cv results, means and sds using kable
+  cv_results_m <- as.matrix(as.data.frame(cv_results))
+  cv_mean<- as.matrix(rowMeans(cv_results_m))
+  cv_sd <- as.matrix(rowSds(cv_results_m))
+  colnames(cv_mean) <- "Mean"
+  colnames(cv_sd) <- "Sd"
+  cv_all <- cbind(cv_results_m, cv_mean, cv_sd)
+  kable(t(cv_all),digits=2)
+}
+
+sales_1 <- game_sales[,-1]
+df <- sales_1 
+target <- 3
+nFolds <- 10
+seedVal <- 500
+metrics_list <- c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","R2")
+assign("prediction_method", lm)
+
+#B.Call the function in 3.A to generate 10-fold cross validation results of the simple lm, rpart and M5P models. 
+cv_function(df, target, 10, seedVal, prediction_method, metrics_list)
+cv_function(df, target, 10, seedVal, rpart, metrics_list)
+cv_function(df, target, 10, seedVal, M5P, metrics_list)
+
+```
+
+#Improve the models with the quadratic term of User_Count: 
+
+```{r - Code Chunk 4}
+#A.Create and add the quadratic term of User_Count, e.g., User_Count_Squared, to the predictors for the target variable.
+
+# add a higher-order "UserCount" term
+game_sales$User_Count2 <- game_sales$User_Count^2
+
+#B.Build a lm model with User_Count_Squared included. Show the summary of this lm model. 
+game_lm_2 <- lm(Global_Sales ~ Platform + Genre + Critic_Score + Critic_Count + 
+                  User_Score + User_Count + User_Count2 + Rating ,data = game_sales)
+
+summary(game_lm_2)
+
+#D.Call the cross validation function defined for 3.A, to generate 10-fold cross validation 
+#results of the simple lm, rpart and M5P models with User_Count_Squared included
+
+sales_2 <- sales_1
+sales_2$User_Count_Squared <- (sales_2$User_Count)^2
+df1 <- sales_2
+target<- 3
+metrics_list <- c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","R2")
+assign("prediction_method", lm)
+
+cv_function(df1, target, 10, seedVal, lm, metrics_list)
+cv_function(df1, target, 10, seedVal, rpart, metrics_list)
+cv_function(df1, target, 10, seedVal, M5P, metrics_list)
+
+```
+
+#Improve the models with the log term of User_Count:
+```{r -Code Chunk 5}
+#A.Create and add the natural log transformation of User_Count, e.g., log_User_Count, 
+#to the predictors for the target variable.
+game_sales$User_Count2 <- NULL
+game_sales$log_User_Count <- log(game_sales$User_Count)
+
+#B.Build a lm model with log_User_Count included and User_Count excluded. Show the summary of this lm model. 
+game_lm_2 <- lm(Global_Sales ~ Platform + Genre + Critic_Score + Critic_Count
+                + User_Score + log_User_Count + Rating ,data = game_sales)
+summary(game_lm_2)
+
+#D.Call the cross validation function defined for 3.A, to generate 10-fold 
+#cross validation results of the simple lm, rpart and M5P models with log_User_Count 
+#included and User_Count excluded.
+
+
+sales_3 <- sales_1
+sales_3$log_User_Count <- log(sales_3$User_Count)
+
+df <- sales_3[,-7]
+target <- 3
+nFolds <- 10
+seedVal <- 500
+metrics_list <- c("MAE","RMSE","MAPE","RMSPE","RAE","RRSE","R2")
+assign("prediction_method", lm)
+
+cv_function(df, target, 10, seedVal, prediction_method, metrics_list)
+cv_function(df, target, 10, seedVal, rpart, metrics_list)
+cv_function(df, target, 10, seedVal, M5P, metrics_list)
+
+```
+
